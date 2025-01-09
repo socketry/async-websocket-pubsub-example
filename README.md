@@ -12,3 +12,9 @@ $ ./emit.sh
 ## Architecture
 
 TODO: insert a diagram here
+
+## Demo
+
+![demo](./demo.gif)
+
+
