@@ -9,9 +9,9 @@ $ ./clients.sh
 $ ./emit.sh
 ```
 
-## Architecture
+## Diagram
 
-TODO: insert a diagram here
+![diagram](./diagram.jpg)
 
 ## Demo
 
