@@ -1,0 +1,36 @@
+<!doctype html>
+<div id="output"></div>
+<script>
+  const url = new URL(location.href);
+  const channel = url.searchParams.get("channel");
+  const port = url.searchParams.get("port") || 7070;
+  const wsUri = `ws://localhost:${port}/`;
+  const output = document.querySelector("#output");
+  const websocket = new WebSocket(wsUri);
+
+  function writeToScreen(message) {
+    output.insertAdjacentHTML("beforeend", `<p>${message}</p>`);
+  }
+
+  function sendMessage(message) {
+    writeToScreen(`SENT: ${message}`);
+    websocket.send(message);
+  }
+
+  websocket.onopen = (e) => {
+    writeToScreen(`CONNECTED: ${wsUri}`);
+    sendMessage(channel);
+  };
+
+  websocket.onmessage = (e) => {
+    writeToScreen(`RECEIVED: ${e.data}`);
+  };
+
+  websocket.onclose = (e) => {
+    writeToScreen("DISCONNECTED");
+  };
+
+  websocket.onerror = (e) => {
+    writeToScreen(`ERROR: ${e.data}`);
+  };
+</script>
