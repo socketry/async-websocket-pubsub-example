@@ -3,38 +3,45 @@
 require 'async/websocket/adapters/rack'
 require 'async/redis'
 
-# key: channel name
-# value: An array of connections for the channel
-$connections = Hash.new { |h, k| h[k] = [] }
+class ChatServer
+  def initialize(app, endpoint: Async::Redis.local_endpoint)
+    @app = app
+    @endpoint = endpoint
 
-run lambda {|env|
-  client = Sync do
-    endpoint = Async::Redis.local_endpoint
-    Async::Redis::Client.new(endpoint)
+    @client = Async::Redis::Client.new(endpoint)
   end
 
-  Async::WebSocket::Adapters::Rack.open(env, protocols: ['ws']) do |connection|
-    loop do
-      channel = connection.read.to_str
-      puts "channel: #{channel}"
+  def call(env)
+    Async::WebSocket::Adapters::Rack.open(env, protocols: ['ws']) do |connection|
+      loop do
+        channel = connection.read.to_str
+  
+        subscribe(channel) do |context|
+          Console.info(connection, "Subscribed", channel: channel)
+  
+          loop do
+            event = context.listen
 
-      $connections[channel] << connection
+            Protocol::WebSocket::TextMessage.generate(event).send(connection)
 
-      client.subscribe(channel) do |context|
-        puts "subscribed to #{channel}"
-
-        loop do
-          event = context.listen
-          puts "event: #{event}"
-
-          $connections[channel].each do |conn|
-            conn.write("message: #{event[2]}")
-            conn.flush
+            connection.flush
           end
         end
       end
-    end
-  ensure
-    $connections.delete(connection)
+    end or @app.call(env)
   end
-}
+
+  private
+
+  def subscribe(channel, &block)
+    @client.subscribe(channel, &block)
+  end
+end
+
+use ChatServer
+
+use Rack::Static, urls: ["/"], root: "public", index: "index.html"
+
+run do |env|
+  [404, {}, []]
+end
